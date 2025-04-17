@@ -40,10 +40,36 @@ def generate_json_input_vivo_movel(data, is_servico, supplier_data):
     #auto_description = f"MesRef{data['mes_referencia']} NumConta{data['numero_conta']}"
     auto_description = "Fatura Vivo Movel"
     
+    # Mapeamento fixo de CNPJs da Vivo para códigos SAP
+    vivo_mapping = {
+        "02558157000162": "1000029760",
+        "02558157000243": "1000029762",
+        "02558157000324": "1000029764",
+        "02558157000839": "1000029766",
+        "02558157000910": "1000029794",
+        "02558157001134": "1000029796",
+        "02558157001304": "1000029798",
+        "02558157001487": "1000029800",
+        "02558157001720": "1000029802",
+        "02558157002297": "1000029804",
+        "02558157002459": "1000029806",
+        "02558157013574": "1000029808",
+        "02558157015941": "1000029810",
+        "02558157018703": "1000032155",
+        "02558157051824": "1000029812",
+        "02558157075685": "1000029814"
+    }
+    
     for nf in data["notas_fiscais"]:
         item_type = "S" if is_servico else "M"
         cnpj = standardize_cnpj(nf['cnpj'])
+        
+        # Tentar obter o código do supplier_data primeiro
         supplier_code = supplier_data.get(cnpj)
+        
+        # Se não encontrou, tentar do mapeamento fixo
+        if not supplier_code:
+            supplier_code = vivo_mapping.get(cnpj)
         
         formatted_short_text = (
             f"[{item_type},{supplier_code}] {auto_description}"

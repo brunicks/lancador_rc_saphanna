@@ -1,0 +1,6 @@
+/assets/
+/config_files/
+config_files/
+
+__pycache__/
+*.py[cod]s
