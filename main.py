@@ -129,8 +129,9 @@ class PDFtoJSONApp:
         style.theme_use("xpnative")
         self.root.configure(bg='#f4f4f4')
         
-        # Carrega os dados dos fornecedores
+        # Carrega os dados dos fornecedores e códigos de materiais
         self.supplier_data = load_supplier_data()
+        self.material_codes = ConfigManager.get_material_codes()
         
         # 1. Criar notebook e frames primeiro
         self.notebook = ttk.Notebook(root)
@@ -225,7 +226,7 @@ class PDFtoJSONApp:
         options_frame.grid(row=2, column=0, sticky="ew", padx=10, pady=5)
         options_frame.columnconfigure(1, weight=1)
         self.is_servico_var = tk.BooleanVar()
-        self.checkbox_servico = ttk.Checkbutton(options_frame, text="É serviço?", variable=self.is_servico_var)
+        self.checkbox_servico = ttk.Checkbutton(options_frame, text="É serviço?", variable=self.is_servico_var, command=self.update_material_dropdown)
         self.checkbox_servico.grid(row=0, column=0, sticky="w")
         self.is_vivo_movel_var = tk.BooleanVar()
         self.checkbox_vivo_movel = ttk.Checkbutton(options_frame, text="Vivo Móvel", variable=self.is_vivo_movel_var, command=self.toggle_supplier_selection)
@@ -247,6 +248,16 @@ class PDFtoJSONApp:
         self.supplier_code_dropdown = ttk.Combobox(input_frame, textvariable=self.supplier_code_var, values=self.get_supplier_options(), state="readonly")
         self.supplier_code_dropdown.grid(row=1, column=1, sticky="ew", padx=5)
         self.supplier_code_var.set("Selecione o fornecedor")
+        
+        # Novos widgets para seleção de material
+        self.label_material_code = ttk.Label(input_frame, text="Material/Serviço:")
+        self.label_material_code.grid(row=2, column=0, sticky="w", pady=2)
+        self.material_code_var = tk.StringVar()
+        self.material_code_dropdown = ttk.Combobox(input_frame, textvariable=self.material_code_var, state="readonly")
+        self.material_code_dropdown.grid(row=2, column=1, sticky="ew", padx=5)
+        
+        # Inicializar o dropdown de materiais
+        self.update_material_dropdown()
         
         # 9. Posicionar notebook
         self.notebook.grid(row=4, column=0, sticky="nsew", padx=10, pady=5)
@@ -276,6 +287,28 @@ class PDFtoJSONApp:
         
         # Log inicial
         self.add_log("Aplicação iniciada", "info")
+    
+    # Método para atualizar o dropdown de materiais conforme o checkbox
+    def update_material_dropdown(self):
+        is_servico = self.is_servico_var.get()
+        
+        # Limpar dropdown atual
+        self.material_code_dropdown.set("")
+        
+        # Determinar qual lista usar
+        category = "servicos" if is_servico else "materiais"
+        
+        # Obter lista de códigos formatados
+        codes = [f"{item['codigo']} - {item['descricao']}" for item in self.material_codes.get(category, [])]
+        
+        # Atualizar dropdown
+        self.material_code_dropdown['values'] = codes
+        
+        # Selecionar o primeiro item como padrão se houver itens
+        if codes:
+            self.material_code_dropdown.current(0)
+        
+        self.add_log(f"Atualizada lista de {'serviços' if is_servico else 'materiais'}", "info")
     
     # Função para atualizar a resposta do SAP
     def update_sap_response(self, response):
@@ -339,6 +372,7 @@ class PDFtoJSONApp:
             self.supplier_code_dropdown.grid_remove()
             self.label_short_text.grid_remove()
             self.entry_short_text.grid_remove()
+            # Manter o campo de material visível
             self.add_log("Modo Vivo Móvel ativado", "info")
         else:
             self.label_supplier_code.grid()
@@ -438,6 +472,15 @@ class PDFtoJSONApp:
                 messagebox.showerror("Erro", "Selecione um fornecedor válido!")
                 return
             
+            # Verificar se material/serviço foi selecionado
+            if not self.material_code_var.get():
+                self.add_log("Tentativa de gerar JSON sem selecionar material/serviço", "error")
+                messagebox.showerror("Erro", "Selecione um material ou serviço!")
+                return
+            
+            # Extrair o código do material selecionado (antes do " - ")
+            material_code = self.material_code_var.get().split(" - ")[0]
+            
             # Calcular próximo PREQ_ITEM baseado no JSON acumulado
             next_preq_item = 10
             if self.accumulated_json:
@@ -455,9 +498,14 @@ class PDFtoJSONApp:
                     messagebox.showerror("Erro", "Nenhuma nota fiscal encontrada na fatura.")
                     return
                 
-                # Gerar JSON base
+                # Gerar JSON base com o código de material selecionado
                 self.add_log(f"Notas fiscais encontradas: {len(data['notas_fiscais'])}", "info")
-                new_json = json.loads(generate_json_input_vivo_movel(data, is_servico, self.supplier_data))
+                new_json = json.loads(generate_json_input_vivo_movel(
+                    data, 
+                    is_servico, 
+                    self.supplier_data, 
+                    material_code
+                ))
                 
                 # Atualizar PREQ_ITEM para cada item
                 for item in new_json:
@@ -476,8 +524,15 @@ class PDFtoJSONApp:
                 supplier_code = self.supplier_code_var.get().split(" - ")[1]
                 self.add_log(f"Processando PDF com fornecedor: {supplier_code}", "info")
                 
-                # Gerar JSON base
-                new_json = json.loads(generate_json_input(self.pdf_text, short_text, is_servico, supplier_code, self.total_value))
+                # Gerar JSON base com o código de material selecionado
+                new_json = json.loads(generate_json_input(
+                    self.pdf_text, 
+                    short_text, 
+                    is_servico, 
+                    supplier_code, 
+                    self.total_value,
+                    material_code
+                ))
                 
                 # Atualizar PREQ_ITEM
                 for item in new_json:

@@ -26,10 +26,16 @@ class ConfigManager:
             'parametros': cls.load_json_file('parametros.json'),
             'credenciais': cls.load_json_file('credenciais.json'),
             'centros_contas': cls.load_json_file('centros_contas.json'),
-            'fornecedores': cls.load_json_file('fornecedores.json')
+            'fornecedores': cls.load_json_file('fornecedores.json'),
+            'codigos_materiais': cls.load_json_file('codigos_materiais.json')
         }
     
     @classmethod
     def get_supplier_data(cls):
         """Carrega e processa dados dos fornecedores"""
         return cls.load_json_file('fornecedores.json')
+    
+    @classmethod
+    def get_material_codes(cls):
+        """Carrega e retorna os códigos de materiais e serviços"""
+        return cls.load_json_file('codigos_materiais.json')

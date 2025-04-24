@@ -10,7 +10,7 @@ def format_number(value):
         value = value.replace(',', '.')  # Converte decimal para ponto
     return value
 
-def generate_json_input(pdf_text, short_text, is_servico, supplier_code, total_value):
+def generate_json_input(pdf_text, short_text, is_servico, supplier_code, total_value, material_code="ZA040282"):
     if not pdf_text:
         return None
     
@@ -23,7 +23,7 @@ def generate_json_input(pdf_text, short_text, is_servico, supplier_code, total_v
     json_input = [
         {
             "PREQ_ITEM": "0010",
-            "MATERIAL": "ZA040282",  
+            "MATERIAL": material_code,  
             "SHORT_TEXT": formatted_short_text, 
             "QUANTITY": "1",  
             "PREQ_PRICE": formatted_value  # Usar valor convertido
@@ -33,7 +33,7 @@ def generate_json_input(pdf_text, short_text, is_servico, supplier_code, total_v
     return json.dumps(json_input, indent=4)
 
 # Função que gera o JSON de entrada pra Vivo Móvel, faturas compostas
-def generate_json_input_vivo_movel(data, is_servico, supplier_data):
+def generate_json_input_vivo_movel(data, is_servico, supplier_data, material_code="ZA040282"):
     json_input = []
     preq_item = 10
 
@@ -82,7 +82,7 @@ def generate_json_input_vivo_movel(data, is_servico, supplier_data):
         
         json_input.append({
             "PREQ_ITEM": f"{preq_item:04}",
-            "MATERIAL": "ZA040282",
+            "MATERIAL": material_code,
             "SHORT_TEXT": formatted_short_text,
             "QUANTITY": "1",
             "PREQ_PRICE": formatted_value  # Usar valor convertido
